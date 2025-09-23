@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -101,11 +100,8 @@ class SupabaseService {
   }
   
   String _generateUniqueId() {
-    // 簡易的なUUID生成（実際の環境ではUUIDパッケージを使用）
-    final random = Random();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final randomSuffix = random.nextInt(999999).toString().padLeft(6, '0');
-    return 'user_${timestamp}_$randomSuffix';
+    // UUIDパッケージを使用してユニークIDを生成
+    return 'user_${const Uuid().v4()}';
   }
   
   Future<void> _registerUser() async {
@@ -186,10 +182,7 @@ class SupabaseService {
   }
   
   String _generateLogId() {
-    final random = Random();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final randomSuffix = random.nextInt(999999).toString().padLeft(6, '0');
-    return 'log_${timestamp}_$randomSuffix';
+    return 'log_${const Uuid().v4()}';
   }
   
   // ユーザーアクティビティ更新

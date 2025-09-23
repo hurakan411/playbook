@@ -2,7 +2,7 @@ class SupabaseConfig {
   // TODO: Supabaseダッシュボードから取得した値に置き換えてください
   // Settings > API から取得できます
   static const String supabaseUrl = 'https://qoekabfukkdfnkdcnlbk.supabase.co';
-  static const String supabaseAnonKey = 'sb_publishable_7iMtCzNsJ2BgTohlBVr-kA_x5sypa-P'; // your-anon-key
+  static const String supabaseAnonKey = 'sb_secret_reyzMNhK0Wf8vN3xjAMIdw_XbP4A_aO'; // your-anon-key
   
   // 開発・本番の切り替え
   static const bool useMockMode = false; // falseで実際のSupabaseを使用

@@ -1,12 +1,38 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-
 import '../models/story.dart';
 import '../services/supabase_service.dart';
 import '../config/supabase_config.dart';
 
 class StoryApi {
-  StoryApi({String? baseUrl, bool useMock = true})
+
+  Future<void> updateStory(Story story) async {
+    final supabase = SupabaseService.instance;
+    if (_useMock || SupabaseConfig.useMockMode) {
+      // モック: 既存ストーリーを上書き
+      final idx = _mockStories.indexWhere((s) => s.id == story.id);
+      if (idx >= 0) {
+        _mockStories[idx] = story;
+      }
+      return;
+    }
+    try {
+      await supabase.logAction('update_story', {
+        'story_id': story.id,
+        'title': story.title,
+        'pages_count': story.pages.length,
+        'source': 'supabase',
+      });
+      final storyData = story.toJson();
+      storyData['user_id'] = supabase.userId;
+      await supabase.client!
+          .from(SupabaseConfig.storiesTable)
+          .update(storyData)
+          .eq('id', story.id)
+          .eq('user_id', supabase.userId!);
+    } catch (e) {
+      print('Error updating story in Supabase: $e');
+    }
+  }
+  StoryApi({String? baseUrl, bool useMock = false})
       : baseUrl = baseUrl ?? 'http://127.0.0.1:8000/api/v1',
         _useMock = useMock;
 
@@ -16,12 +42,13 @@ class StoryApi {
   // モックデータ
   static final List<Story> _mockStories = [];
 
-  Future<List<Story>> listStories() async {
+  /// If [useFilter] is false, skip the user_id filter (debug only).
+  Future<List<Story>> listStories({bool useFilter = true}) async {
     final supabase = SupabaseService.instance;
     
     if (_useMock || SupabaseConfig.useMockMode) {
       await Future.delayed(const Duration(milliseconds: 300));
-      
+
       // ログ記録（モック環境）
       try {
         await supabase.logAction('list_stories', {
@@ -31,7 +58,7 @@ class StoryApi {
       } catch (e) {
         print('Error logging action: $e');
       }
-      
+
       // 初回のみサンプルデータを追加
       if (_mockStories.isEmpty) {
         _mockStories.addAll([
@@ -51,6 +78,7 @@ class StoryApi {
           ),
         ]);
       }
+
       return List.from(_mockStories);
     }
     
@@ -60,13 +88,29 @@ class StoryApi {
         'source': 'supabase',
       });
       
-      final response = await supabase.client!
-          .from(SupabaseConfig.storiesTable)
-          .select()
-          .eq('user_id', supabase.userId!)
-          .order('created_at', ascending: false);
-      
-      return response.map((json) => Story.fromJson(json)).toList();
+  final query = supabase.client!
+    .from(SupabaseConfig.storiesTable)
+    .select('*, pages(*)');
+  final response = await (useFilter
+    ? query.eq('user_id', supabase.userId!).order('created_at', ascending: false)
+    : query.order('created_at', ascending: false));
+
+      // Debugging: print user id and raw response so developer can inspect what's returned
+      try {
+        print('StoryApi.listStories: userId=${supabase.userId}');
+        print('StoryApi.listStories: rawResponse type=${response.runtimeType}');
+        print('StoryApi.listStories: rawResponse=$response');
+      } catch (e) {
+        // ignore logging errors
+      }
+
+      try {
+        final list = (response as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        return list.map((json) => Story.fromJson(json)).toList();
+      } catch (e) {
+        print('StoryApi.listStories: failed to parse response: $e');
+        return [];
+      }
       
     } catch (e) {
       print('Error fetching stories from Supabase: $e');

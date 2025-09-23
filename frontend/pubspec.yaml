@@ -14,8 +14,11 @@ dependencies:
   http: ^1.1.0
   lottie: ^3.1.0
   supabase_flutter: ^2.0.0  # ⭐ 追加
-  uuid: ^4.0.0  # ⭐ 追加
+  uuid: ^4.5.1  # ⭐ 追加
   shared_preferences: ^2.2.0  # ⭐ 追加
+  url_launcher: ^6.2.1
+  in_app_purchase: ^3.1.11  # iOS課金機能
+  in_app_purchase_storekit: ^0.3.6+1  # iOS StoreKit
 
 
 dev_dependencies:

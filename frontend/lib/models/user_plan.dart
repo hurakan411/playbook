@@ -21,9 +21,9 @@ class UserPlan {
   static const free = UserPlan(
     name: 'free',
     displayName: 'フリープラン',
-    monthlyLimit: 3,
+    monthlyLimit: 1,
     maxPages: 4,
-    availableStyles: ['水彩', 'アニメ', '絵本風'],
+    availableStyles: ['水彩', '切り絵'],
   );
   
   static const basic = UserPlan(
@@ -31,7 +31,7 @@ class UserPlan {
     displayName: 'ベーシックプラン',
     monthlyLimit: 10,
     maxPages: 6,
-    availableStyles: ['水彩', 'アニメ', '油彩', '絵本風', '手描き'],
+    availableStyles: ['水彩', '切り絵', '線画', "クレヨン"],
   );
   
   static const premium = UserPlan(
@@ -39,7 +39,7 @@ class UserPlan {
     displayName: 'プレミアムプラン',
     monthlyLimit: -1,
     maxPages: 10,
-    availableStyles: ['水彩', 'アニメ', '油彩', '絵本風', '手描き', 'ドット絵', 'プレミアム水彩', 'プレミアム油彩'],
+    availableStyles: ['水彩', '切り絵', '線画', "クレヨン", "写実", "ポップアート", "ゆるキャラ"],
   );
   
   // Supabaseからユーザープランを取得

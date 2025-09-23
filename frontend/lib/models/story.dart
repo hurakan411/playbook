@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class StoryPage {
   final String imageUrl;
   final String text;
@@ -5,8 +7,8 @@ class StoryPage {
   StoryPage({required this.imageUrl, required this.text});
 
   factory StoryPage.fromJson(Map<String, dynamic> json) => StoryPage(
-        imageUrl: json['imageUrl'] as String,
-        text: json['text'] as String,
+  imageUrl: (json['imageUrl'] ?? json['image_url'] ?? json['image'] ?? '') as String,
+  text: (json['text'] ?? json['body'] ?? '') as String,
       );
 
   Map<String, dynamic> toJson() => {
@@ -19,21 +21,119 @@ class Story {
   final String id;
   final String title;
   final List<StoryPage> pages;
+  final int? totalPages; // データベースから取得する予定ページ数
+  final bool? isCompletedFromDb; // データベースのis_completedフィールド
+  final int? currentPages; // stories.current_pages: 次の入力を受け付ける現在のページ番号(1-based)
 
-  Story({required this.id, required this.title, required this.pages});
+  Story({
+    required this.id, 
+    required this.title, 
+    required this.pages,
+    this.totalPages,
+    this.isCompletedFromDb,
+  this.currentPages,
+  });
 
-  factory Story.fromJson(Map<String, dynamic> json) => Story(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        pages: (json['pages'] as List<dynamic>)
-            .map((e) => StoryPage.fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+  factory Story.fromJson(Map<String, dynamic> json) {
+    final pages = _parsePages(json['pages']);
+    final totalPages = json['total_pages'] as int?;
+    
+    // totalPagesが設定されており、実際のページ数より多い場合は、
+    // 不足分を「生成待ち」ページとして補完
+    final finalPages = <StoryPage>[];
+    finalPages.addAll(pages);
+    
+    if (totalPages != null && pages.length < totalPages) {
+      for (int i = pages.length + 1; i <= totalPages; i++) {
+        finalPages.add(StoryPage(
+          imageUrl: '',
+          text: '${i}ページ目のテキスト（生成待ち）',
+        ));
+      }
+    }
+    
+    return Story(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      pages: finalPages,
+      totalPages: totalPages,
+      isCompletedFromDb: json['is_completed'] as bool?,
+  currentPages: (json['current_page'] ?? json['current_pages']) as int?,
+    );
+  }
+
+  static List<StoryPage> _parsePages(dynamic pagesField) {
+    try {
+      if (pagesField == null) return [];
+      // Supabase join: pages is a List<Map<String, dynamic>>
+      if (pagesField is List) {
+        // すべてMapならそのままStoryPage化
+        if (pagesField.isNotEmpty && pagesField.first is Map) {
+          return pagesField.map((e) => StoryPage.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+        }
+      }
+      // If pagesField is a JSON string
+      if (pagesField is String) {
+        final decoded = jsonDecode(pagesField) as List<dynamic>;
+        return decoded.map((e) => StoryPage.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+      }
+      return [];
+    } catch (e) {
+      // Fallback: empty list on parse errors
+      print('Story._parsePages: failed to parse pages: $e');
+      return [];
+    }
+  }
+
+  // 絵本が完成しているかどうかを判定
+  bool get isCompleted {
+    // 1. データベースのis_completedフィールドがtrueなら完成
+    if (isCompletedFromDb == true) return true;
+    
+    // 2. total_pagesが設定されている場合、実際のページ数と比較
+    if (totalPages != null) {
+      // 全ページが生成済みで、かつ全ページに画像とテキストがある場合に完成
+      return pages.length >= totalPages! && 
+             pages.every((page) => 
+               page.imageUrl.isNotEmpty && 
+               page.text.isNotEmpty && 
+               !page.text.contains('生成待ち')
+             );
+    }
+    
+    // 3. フォールバック: 従来のロジック
+    return pages.isNotEmpty && pages.every((page) => 
+      page.imageUrl.isNotEmpty && 
+      page.text.isNotEmpty && 
+      !page.text.contains('生成待ち')
+    );
+  }
+
+  // 完成済みページ数を取得
+  int get completedPagesCount {
+    return pages.where((page) => 
+      page.imageUrl.isNotEmpty && 
+      page.text.isNotEmpty && 
+      !page.text.contains('生成待ち')
+    ).length;
+  }
+
+  // 進行状況の割合（0.0 〜 1.0）
+  double get completionProgress {
+    if (totalPages != null && totalPages! > 0) {
+      return completedPagesCount / totalPages!;
+    }
+    if (pages.isEmpty) return 0.0;
+    return completedPagesCount / pages.length;
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'title': title,
         'pages': pages.map((p) => p.toJson()).toList(),
+        'total_pages': totalPages,
+        'is_completed': isCompletedFromDb,
+  'current_page': currentPages,
       };
 }
 

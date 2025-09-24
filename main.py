@@ -3,7 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # from .api.v1.stories import router as stories_router  # 削除
-from .api.v1.generation import router as generation_router
+# from .api.v1.generation import router as generation_router
+from app.api.v1.generation import router as generation_router
 
 import logging
 

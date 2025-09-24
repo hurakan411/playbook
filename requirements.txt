@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+requests
+openai
+python-dotenv
+supabase
+httpx
+pydantic
+python-multipart
